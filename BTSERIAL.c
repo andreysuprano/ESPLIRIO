@@ -6,33 +6,47 @@ BluetoothSerial SerialBT;
 #error Bluetooth is not enabled! Please run `make menuconfig` to and enable it
 #endif
 
+bool awaitPayment = false;
+
 void setup() {
   SerialBT.begin("LirioMachine");
   Serial.begin(115200);
-  pinMode(21, INPUT_PULLUP);
-  pinMode(17, OUTPUT);
-  pinMode(18, OUTPUT);
+  pinMode(21, INPUT_PULLUP);//FOTOCELULA
+  pinMode(17, OUTPUT);//PULSO
+  pinMode(18, OUTPUT);//LED
 }
 
 void loop() {
   int buttonState = digitalRead(21);
+
   digitalWrite(17, HIGH);
-  digitalWrite(18, HIGH);
-  if(buttonState == HIGH){
-    SerialBT.println("PAY");    
+
+  if(buttonState == LOW && !awaitPayment){
+    SerialBT.println("PAY"); 
+    awaitPayment = true;   
+    delay(1000);
+  }
+
+  if(buttonState == HIGH && awaitPayment){
+    SerialBT.println("REMOVE"); 
+    awaitPayment = false;   
+    delay(1000);
   }
 
   if(SerialBT.available()){
-    Serial.write(SerialBT.readString());
     String recebido = SerialBT.readString();
-    if(recebido == "INIT"){
+    Serial.println(recebido);
+    if(recebido == "INIT" && awaitPayment){
+      Serial.println("Servindo...");
       digitalWrite(17, LOW);
-      digitalWrite(18, LOW);
       delay(2000);
+      digitalWrite(17, HIGH);
+      awaitPayment = false;  
+      delay(15000);
     }
   }
+
   if (Serial.available()) {
-    SerialBT.write(Serial.read());
+    SerialBT.println(Serial.readString());
   }
-  delay(20);
 }
